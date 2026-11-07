@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>胶卷展示柜</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="gift-system.css">
+</head>
+<body>
+  <header class="nav" aria-label="网站导航">
+    <span>FILM CABINET</span>
+    <nav><a href="#about">ABOUT</a><a href="#archive">ARCHIVE</a><a href="#contact">CONTACT</a><button id="background-toggle" class="background-toggle" type="button">🎨 更换背景</button></nav>
+  </header>
+  <main class="scene" aria-label="可交互的 3D 木质胶卷展示柜">
+    <div class="canvas-wrap" id="canvas-wrap"></div>
+    <p class="instruction">拖动旋转 · 滚轮缩放 · 点击柜门打开</p>
+    <aside class="film-picker" id="film-picker" aria-hidden="true">
+      <div class="film-picker-card">
+        <button id="film-picker-close" class="film-picker-close" type="button" aria-label="关闭">×</button>
+        <p class="film-picker-kicker">NEW FILM</p>
+        <h2>定制这一卷胶卷</h2>
+        <label>胶卷文字<input id="film-name-input" maxlength="18" value="GOLD 400"></label>
+        <p class="film-picker-label">选择标签颜色</p>
+        <div class="film-color-options" id="film-color-options"></div>
+        <button id="take-film" class="take-film" type="button">拿起胶卷</button>
+      </div>
+    </aside>
+    <aside class="background-panel" id="background-panel" aria-hidden="true">
+      <div class="background-panel-head"><div><p>SCENE MOOD</p><h2>更换背景</h2></div><button id="background-close" type="button" aria-label="关闭背景设置">×</button></div>
+      <p class="background-label">预设背景</p>
+      <div id="background-presets" class="background-presets"></div>
+      <p class="background-label">自定义背景</p>
+      <label class="background-upload" for="background-file">上传背景图<input id="background-file" type="file" accept="image/*" hidden></label>
+      <small>背景会自动保存在这台设备上</small>
+    </aside>
+    <aside class="object-tools" aria-label="胶卷操作">
+      <button id="sample-sticker" class="object-tool" type="button" aria-pressed="false"><span class="tool-roll-icon" aria-hidden="true"></span><span>添加胶卷</span></button>
+      <button id="trash-sticker" class="object-tool" type="button" aria-pressed="false"><span class="tool-bin-icon" aria-hidden="true"></span><span>删除胶卷</span></button>
+    </aside>
+    <aside class="gift-palette" id="gift-palette" aria-hidden="true"><span>礼盒颜色</span><button data-gift-color="green" type="button" aria-label="绿色礼盒"></button><button data-gift-color="pink" type="button" aria-label="粉色礼盒"></button><button data-gift-color="blue" type="button" aria-label="蓝色礼盒"></button><button data-gift-color="cream" type="button" aria-label="奶油礼盒"></button></aside>
+    <div class="hover-tag-preview" id="hover-tag-preview" aria-live="polite"></div>
+    <aside class="tag-note-editor" id="tag-note-editor" aria-live="polite">
+      <h2 id="tag-note-title">编辑备注</h2>
+      <textarea id="tag-note-input" maxlength="42" placeholder="写一句小标注…"></textarea>
+      <div class="tag-note-actions">
+        <button id="tag-note-cancel" type="button">取消</button>
+        <button id="tag-note-confirm" type="button">确认</button>
+      </div>
+    </aside>
+  </main>
+  <script src="bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+  <script src="gift-system.js"></script>
+</body>
+</html>
