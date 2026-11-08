@@ -448,7 +448,7 @@ function noteFor(noteKey, fallbackKey) {
 }
 
 function createFilmTag(film, noteKey = film.filmId) {
-  const texture = createTagTexture(film, noteFor(noteKey, film.filmId));
+  const texture = createTagTexture(film, noteFor(noteKey));
   const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
   const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.242), material);
   tag.renderOrder = 10;
@@ -608,6 +608,9 @@ function placeFilmInCell(cellId) {
   if (!cell) return;
   if (!selectedFilm) { window.alert('请先点击柜子旁边的胶卷样品。'); return; }
   if (cell.filmName || cell.film) { window.alert('该位置已被占用。'); return; }
+  // A cell is a new shelf position.  Do not inherit a note from the roll that
+  // used to be here (or from another roll with the same film type).
+  deleteNote(cellId);
   cell.film = selectedFilm;
   cell.filmName = selectedFilm.id;
   persistCabinetData();
@@ -846,10 +849,16 @@ function saveNote(filmId, value) {
   notes[filmId] = value;
   localStorage.setItem('film-cabinet-notes', JSON.stringify(notes));
 }
+function deleteNote(noteKey) {
+  const notes = savedNotes();
+  if (!(noteKey in notes)) return;
+  delete notes[noteKey];
+  localStorage.setItem('film-cabinet-notes', JSON.stringify(notes));
+}
 function redrawTag(tag) {
   const { film, noteKey, texture } = tag.userData.noteTag;
   texture.dispose();
-  const nextTexture = createTagTexture(film, noteFor(noteKey, film.filmId));
+  const nextTexture = createTagTexture(film, noteFor(noteKey));
   tag.material.map = nextTexture;
   tag.material.needsUpdate = true;
   tag.userData.noteTag.texture = nextTexture;
@@ -870,7 +879,7 @@ function openTagEditor(tag) {
   selectedTag = tag;
   const { film, noteKey } = tag.userData.noteTag;
   tagNoteTitle.textContent = '编辑备注';
-  tagNoteInput.value = noteFor(noteKey, film.filmId);
+  tagNoteInput.value = noteFor(noteKey);
   tagNoteEditor.classList.add('is-visible');
   const base = tag.userData.baseScale || .76;
   gsap.to(tag.scale, { x: base * 1.45, y: base * 1.45, z: base * 1.45, duration: .25, ease: 'back.out(1.5)' });
@@ -921,7 +930,7 @@ function renderHoverTagPreview(roll) {
   }
   const tag = roll.userData.tag;
   const { film, noteKey } = tag.userData.noteTag;
-  const note = noteFor(noteKey, film.filmId) || '＋ 添加备注';
+  const note = noteFor(noteKey) || '＋ 添加备注';
   hoverTagPreview.textContent = note;
   hoverTagPreview.classList.add('is-visible');
 }
@@ -1026,6 +1035,9 @@ function isTrashBin(object) {
 function removeFilmFromCell(cellId) {
   const cell = cabinetData.find((item) => item.id === cellId);
   if (!cell) return;
+  // Deleting a film also deletes its shelf card.  This prevents an old note
+  // from following the next roll that is put into the same cubby.
+  deleteNote(cellId);
   cell.film = null;
   cell.filmName = null;
   persistCabinetData();

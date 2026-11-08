@@ -34379,7 +34379,7 @@ void main() {
     return notes[noteKey] ?? notes[fallbackKey] ?? "";
   }
   function createFilmTag(film, noteKey = film.filmId) {
-    const texture = createTagTexture(film, noteFor(noteKey, film.filmId));
+    const texture = createTagTexture(film, noteFor(noteKey));
     const material = new MeshBasicMaterial({ map: texture, transparent: true, side: DoubleSide, depthTest: false, depthWrite: false });
     const tag = new Mesh(new PlaneGeometry(0.62, 0.242), material);
     tag.renderOrder = 10;
@@ -34531,6 +34531,7 @@ void main() {
       window.alert("\u8BE5\u4F4D\u7F6E\u5DF2\u88AB\u5360\u7528\u3002");
       return;
     }
+    deleteNote(cellId);
     cell.film = selectedFilm;
     cell.filmName = selectedFilm.id;
     persistCabinetData();
@@ -34860,10 +34861,16 @@ void main() {
     notes[filmId] = value;
     localStorage.setItem("film-cabinet-notes", JSON.stringify(notes));
   }
+  function deleteNote(noteKey) {
+    const notes = savedNotes();
+    if (!(noteKey in notes)) return;
+    delete notes[noteKey];
+    localStorage.setItem("film-cabinet-notes", JSON.stringify(notes));
+  }
   function redrawTag(tag) {
     const { film, noteKey, texture } = tag.userData.noteTag;
     texture.dispose();
-    const nextTexture = createTagTexture(film, noteFor(noteKey, film.filmId));
+    const nextTexture = createTagTexture(film, noteFor(noteKey));
     tag.material.map = nextTexture;
     tag.material.needsUpdate = true;
     tag.userData.noteTag.texture = nextTexture;
@@ -34884,7 +34891,7 @@ void main() {
     selectedTag = tag;
     const { film, noteKey } = tag.userData.noteTag;
     tagNoteTitle.textContent = "\u7F16\u8F91\u5907\u6CE8";
-    tagNoteInput.value = noteFor(noteKey, film.filmId);
+    tagNoteInput.value = noteFor(noteKey);
     tagNoteEditor.classList.add("is-visible");
     const base = tag.userData.baseScale || 0.76;
     gsapWithCSS.to(tag.scale, { x: base * 1.45, y: base * 1.45, z: base * 1.45, duration: 0.25, ease: "back.out(1.5)" });
@@ -34937,7 +34944,7 @@ void main() {
     }
     const tag = roll.userData.tag;
     const { film, noteKey } = tag.userData.noteTag;
-    const note = noteFor(noteKey, film.filmId) || "\uFF0B \u6DFB\u52A0\u5907\u6CE8";
+    const note = noteFor(noteKey) || "\uFF0B \u6DFB\u52A0\u5907\u6CE8";
     hoverTagPreview.textContent = note;
     hoverTagPreview.classList.add("is-visible");
   }
@@ -35022,6 +35029,7 @@ void main() {
   function removeFilmFromCell(cellId) {
     const cell = cabinetData.find((item) => item.id === cellId);
     if (!cell) return;
+    deleteNote(cellId);
     cell.film = null;
     cell.filmName = null;
     persistCabinetData();
