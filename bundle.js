@@ -33911,6 +33911,21 @@ void main() {
   var backgroundFile = document.querySelector("#background-file");
   var sampleSticker = document.querySelector("#sample-sticker");
   var trashSticker = document.querySelector("#trash-sticker");
+  var paperboxIntro = document.querySelector("#paperbox-intro");
+  var paperboxOpen = document.querySelector("#paperbox-open");
+  function openPaperboxIntro() {
+    if (!paperboxIntro || paperboxIntro.classList.contains("is-opening")) return;
+    paperboxIntro.classList.add("is-opening");
+    window.setTimeout(() => document.body.classList.add("intro-ready"), 210);
+    window.setTimeout(() => paperboxIntro.classList.add("is-gone"), 680);
+  }
+  paperboxOpen?.addEventListener("click", openPaperboxIntro);
+  paperboxOpen?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openPaperboxIntro();
+    }
+  });
   var scene = new Scene();
   scene.background = null;
   function getCanvasSize() {

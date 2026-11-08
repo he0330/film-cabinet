@@ -22,6 +22,21 @@ const backgroundPresets = document.querySelector('#background-presets');
 const backgroundFile = document.querySelector('#background-file');
 const sampleSticker = document.querySelector('#sample-sticker');
 const trashSticker = document.querySelector('#trash-sticker');
+const paperboxIntro = document.querySelector('#paperbox-intro');
+const paperboxOpen = document.querySelector('#paperbox-open');
+
+// The first screen is a small paper-box sticker.  Opening it reveals the
+// already loaded cabinet behind it, making the cabinet feel as if it pops out.
+function openPaperboxIntro() {
+  if (!paperboxIntro || paperboxIntro.classList.contains('is-opening')) return;
+  paperboxIntro.classList.add('is-opening');
+  window.setTimeout(() => document.body.classList.add('intro-ready'), 210);
+  window.setTimeout(() => paperboxIntro.classList.add('is-gone'), 680);
+}
+paperboxOpen?.addEventListener('click', openPaperboxIntro);
+paperboxOpen?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPaperboxIntro(); }
+});
 const scene = new THREE.Scene();
 scene.background = null;
 
