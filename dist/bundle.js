@@ -1,5 +1,5 @@
 (() => {
-  // node_modules/three/build/three.core.js
+  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/three/build/three.core.js
   var REVISION = "187";
   var MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
   var TOUCH = { ROTATE: 0, PAN: 1, DOLLY_PAN: 2, DOLLY_ROTATE: 3 };
@@ -17287,7 +17287,7 @@
     }
   }
 
-  // node_modules/three/build/three.module.js
+  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/three/build/three.module.js
   function WebGLAnimation() {
     let context3 = null;
     let isAnimating = false;
@@ -28673,7 +28673,7 @@ void main() {
     }
   };
 
-  // node_modules/three/examples/jsm/controls/OrbitControls.js
+  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/three/examples/jsm/controls/OrbitControls.js
   var _changeEvent = { type: "change" };
   var _startEvent = { type: "start" };
   var _endEvent = { type: "end" };
@@ -29595,7 +29595,7 @@ void main() {
     }
   }
 
-  // node_modules/gsap/gsap-core.js
+  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/gsap/gsap-core.js
   function _assertThisInitialized(self2) {
     if (self2 === void 0) {
       throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
@@ -32769,7 +32769,7 @@ void main() {
   var Expo = _easeMap.Expo;
   var Circ = _easeMap.Circ;
 
-  // node_modules/gsap/CSSPlugin.js
+  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/gsap/CSSPlugin.js
   var _win2;
   var _doc2;
   var _docElement;
@@ -33886,11 +33886,11 @@ void main() {
   });
   gsap.registerPlugin(CSSPlugin);
 
-  // node_modules/gsap/index.js
+  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/gsap/index.js
   var gsapWithCSS = gsap.registerPlugin(CSSPlugin) || gsap;
   var TweenMaxWithCSS = gsapWithCSS.core.Tween;
 
-  // main.js
+  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/main.js
   var host = document.querySelector("#canvas-wrap");
   var instruction = document.querySelector(".instruction");
   var filmPicker = document.querySelector("#film-picker");
@@ -33937,7 +33937,8 @@ void main() {
   }
   var initialCanvasSize = getCanvasSize();
   var camera = new PerspectiveCamera(38, initialCanvasSize.width / initialCanvasSize.height, 0.1, 100);
-  var homeCamera = new Vector3(0, 0.25, 13.6);
+  var isPhonePortrait = () => window.matchMedia("(max-width: 640px) and (orientation: portrait)").matches;
+  var homeCamera = new Vector3(0, 0.25, isPhonePortrait() ? 19.5 : 13.6);
   var homeTarget = new Vector3(0, 0.25, 0);
   camera.position.copy(homeCamera);
   var renderer = new WebGLRenderer({ antialias: true, alpha: true });
@@ -34048,6 +34049,18 @@ void main() {
   controls.maxAzimuthAngle = 1.45;
   controls.minAzimuthAngle = -1.45;
   controls.update();
+  var wasPhonePortrait = isPhonePortrait();
+  function syncResponsiveCamera() {
+    const phonePortrait = isPhonePortrait();
+    if (phonePortrait === wasPhonePortrait) return;
+    wasPhonePortrait = phonePortrait;
+    homeCamera.z = phonePortrait ? 19.5 : 13.6;
+    controls.minDistance = phonePortrait ? 10.5 : 7.3;
+    controls.maxDistance = phonePortrait ? 23 : 16;
+    gsapWithCSS.to(camera.position, { x: homeCamera.x, y: homeCamera.y, z: homeCamera.z, duration: 0.35, ease: "power2.out" });
+    gsapWithCSS.to(controls.target, { x: homeTarget.x, y: homeTarget.y, z: homeTarget.z, duration: 0.35, ease: "power2.out", onUpdate: () => controls.update() });
+  }
+  window.addEventListener("orientationchange", () => window.setTimeout(syncResponsiveCamera, 180));
   scene.add(new HemisphereLight(16775149, 5978149, 2.1));
   var keyLight = new DirectionalLight(16769735, 3.4);
   keyLight.position.set(6, 8, 7);

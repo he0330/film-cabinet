@@ -214,3 +214,49 @@ body.projector-mode.is-idle { cursor:none; }
 body.projector-mode.is-idle .projector-exit,body.projector-mode.is-idle .projector-thumbnails { opacity:0; pointer-events:none; }
 body.projector-mode.is-idle .projector-thumbnails { transform:translate(-10px,-50%); }
 @media(max-width:700px){.projector-stage{width:92vw;padding:22px 0}.projector-thumbnails{left:8px;width:48px;gap:5px;padding:4px}.projector-screen{aspect-ratio:16 / 9}.projector-perforations{height:14px;background:repeating-linear-gradient(90deg,#070707 0 7px,#e7e1ce 7px 13px,#070707 13px 20px)}}
+
+/* Phone portrait: the desktop grid used to squeeze the 3D canister and preview
+   into two narrow columns. Use a clear vertical reading order instead. */
+@media (max-width:640px) and (orientation:portrait) {
+  html, body { min-width:0; overflow-x:hidden; background:#fff; }
+  .topbar { position:sticky; top:0; z-index:40; display:flex; flex-wrap:wrap; gap:6px; min-height:54px; height:auto; padding:7px 9px; background:rgba(255,255,255,.96); }
+  .topbar-left, .topbar-actions { display:flex; flex-wrap:wrap; gap:6px; }
+  .topbar-left { flex:1 1 100%; }
+  .topbar-left a { display:none; }
+  .topbar button { min-height:30px; padding:6px 9px; font-size:10px; white-space:nowrap; }
+  .topbar-actions { justify-content:space-between; width:100%; }
+
+  .tabletop-scene { display:flex !important; flex-direction:column; align-items:center; gap:22px; min-height:calc(100dvh - 54px); padding:16px 12px 38px; background:#fff !important; }
+  .tabletop-scene::before, .tabletop-scene::after { display:none; }
+  .left-film-stack { display:flex; flex-direction:column; align-items:center; width:min(100%,330px); padding:0; }
+  .left-film-stack .canister-zone { display:flex; justify-content:center; width:100%; padding:0; }
+  .left-film-stack .canister-zone .detail-model { width:min(100%,300px); height:185px; max-width:none; margin:0 auto; }
+  .canister-camera-sticker { top:4px; left:3px; transform:rotate(-7deg) scale(.82); }
+  .canister-camera-sticker.is-visible { transform:rotate(-7deg) scale(.9); }
+  .left-film-stack .film-path { width:min(100%,230px); margin:-17px 0 0; padding:0; }
+  .left-film-stack .film-ribbon { width:100%; max-height:340px; padding:0; overflow-y:auto; }
+  .left-film-stack .film-ribbon .frame { height:132px; min-height:132px; padding:0 18px; }
+  .left-film-stack .film-ribbon .frame + .frame { border-top-width:5px; }
+  .left-film-stack .film-ribbon .frame::before, .left-film-stack .film-ribbon .frame::after { top:4px; bottom:4px; width:11px; }
+  .left-film-stack .film-ribbon .film-tail { height:45px; margin-bottom:-32px; }
+
+  .polaroid-zone { width:min(100%,430px); margin:0; }
+  .polaroid { width:100%; padding:23px 0; }
+  .polaroid::before, .polaroid::after { right:0; left:0; height:13px; }
+  .polaroid::before { top:4px; }.polaroid::after { bottom:4px; }
+  .polaroid-image { min-height:220px; max-height:none; aspect-ratio:4 / 3; border:0; }
+  .polaroid-image img { object-fit:contain; }
+  .polaroid-caption { font-size:10px; }
+  .media-controls { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; padding:9px; }
+  .media-controls .control-button { flex:1 1 calc(50% - 7px); justify-content:center; min-width:0; padding:8px 6px; font-size:10px; }
+  .media-controls .projection-button { flex-basis:100%; margin-left:0; }
+  .switch-control { flex:1 1 45%; justify-content:center; font-size:9px; }
+  .camera-meta-row { width:100%; margin:0 0 8px; }
+  .camera-choice { width:100%; justify-content:flex-end; }
+  .upload-dock { width:100%; margin-top:10px; }
+  .detail-background-panel { top:118px; right:10px; }
+  .tabletop-scene.annotation-mode { display:block !important; min-height:calc(100dvh - 54px); padding:12px; }
+  .tabletop-scene.annotation-mode .polaroid-zone { width:100%; margin:0; }
+  .tabletop-scene.annotation-mode .polaroid { padding:18px 0; }
+  .tabletop-scene.annotation-mode .polaroid-image { aspect-ratio:auto; min-height:0; }
+}

@@ -50,7 +50,10 @@ function getCanvasSize() {
 const initialCanvasSize = getCanvasSize();
 const camera = new THREE.PerspectiveCamera(38, initialCanvasSize.width / initialCanvasSize.height, 0.1, 100);
 // Start facing the cabinet straight on; users can still drag to inspect the sides.
-const homeCamera = new THREE.Vector3(0, 0.25, 13.6);
+const isPhonePortrait = () => window.matchMedia('(max-width: 640px) and (orientation: portrait)').matches;
+// A phone portrait viewport is much narrower than desktop, so it needs a
+// farther starting position to show the whole cabinet rather than crop it.
+const homeCamera = new THREE.Vector3(0, 0.25, isPhonePortrait() ? 19.5 : 13.6);
 const homeTarget = new THREE.Vector3(0, 0.25, 0);
 camera.position.copy(homeCamera);
 
@@ -159,6 +162,19 @@ controls.maxAzimuthAngle = 1.45;
 controls.minAzimuthAngle = -1.45;
 // Commit the front-facing target before the first rendered frame.
 controls.update();
+
+let wasPhonePortrait = isPhonePortrait();
+function syncResponsiveCamera() {
+  const phonePortrait = isPhonePortrait();
+  if (phonePortrait === wasPhonePortrait) return;
+  wasPhonePortrait = phonePortrait;
+  homeCamera.z = phonePortrait ? 19.5 : 13.6;
+  controls.minDistance = phonePortrait ? 10.5 : 7.3;
+  controls.maxDistance = phonePortrait ? 23 : 16;
+  gsap.to(camera.position, { x: homeCamera.x, y: homeCamera.y, z: homeCamera.z, duration: .35, ease: 'power2.out' });
+  gsap.to(controls.target, { x: homeTarget.x, y: homeTarget.y, z: homeTarget.z, duration: .35, ease: 'power2.out', onUpdate: () => controls.update() });
+}
+window.addEventListener('orientationchange', () => window.setTimeout(syncResponsiveCamera, 180));
 
 scene.add(new THREE.HemisphereLight(0xfff7ed, 0x5b3825, 2.1));
 const keyLight = new THREE.DirectionalLight(0xffe2c7, 3.4);
