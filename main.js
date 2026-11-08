@@ -25,10 +25,64 @@ const trashSticker = document.querySelector('#trash-sticker');
 const paperboxIntro = document.querySelector('#paperbox-intro');
 const paperboxOpen = document.querySelector('#paperbox-open');
 
+// Small Web Audio cues keep the scene tactile without requiring audio files.
+// They are only created after a user gesture, so mobile browsers allow them too.
+let sceneAudioContext;
+function getSceneAudio() {
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return null;
+  if (!sceneAudioContext) sceneAudioContext = new AudioCtor();
+  if (sceneAudioContext.state === 'suspended') sceneAudioContext.resume();
+  return sceneAudioContext;
+}
+function playSceneSfx(kind) {
+  const context = getSceneAudio();
+  if (!context) return;
+  const now = context.currentTime + .01;
+  const recipes = {
+    paperOpen: [[280, 520, .07, 'triangle'], [720, 420, .12, 'sine']],
+    filmIn: [[360, 660, .08, 'sine'], [660, 900, .12, 'triangle']],
+    filmOut: [[680, 330, .13, 'triangle']],
+    binIn: [[250, 520, .07, 'triangle'], [520, 760, .1, 'sine']],
+    binOut: [[580, 260, .12, 'triangle']],
+    filmPlace: [[720, 410, .08, 'triangle']],
+    trashDrop: [[220, 120, .14, 'sine']],
+    giftIn: [[390, 620, .11, 'sine'], [620, 880, .14, 'triangle']],
+    giftOut: [[720, 390, .13, 'triangle']],
+    mailIn: [[470, 760, .09, 'sine'], [760, 980, .11, 'sine']],
+    mailOut: [[760, 360, .12, 'triangle']],
+  };
+  (recipes[kind] || []).forEach(([from, to, duration, type], index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(from, now + index * .018);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(35, to), now + index * .018 + duration);
+    gain.gain.setValueAtTime(.0001, now + index * .018);
+    gain.gain.exponentialRampToValueAtTime(.075, now + index * .018 + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + index * .018 + duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(now + index * .018);
+    oscillator.stop(now + index * .018 + duration + .02);
+  });
+  if (kind === 'paperOpen') {
+    const buffer = context.createBuffer(1, Math.floor(context.sampleRate * .13), context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const noise = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    filter.type = 'bandpass'; filter.frequency.value = 1750; filter.Q.value = .8;
+    gain.gain.setValueAtTime(.035, now); gain.gain.exponentialRampToValueAtTime(.0001, now + .13);
+    noise.buffer = buffer; noise.connect(filter).connect(gain).connect(context.destination); noise.start(now);
+  }
+}
+
 // The first screen is a small paper-box sticker.  Opening it reveals the
 // already loaded cabinet behind it, making the cabinet feel as if it pops out.
 function openPaperboxIntro() {
   if (!paperboxIntro || paperboxIntro.classList.contains('is-opening')) return;
+  playSceneSfx('paperOpen');
   paperboxIntro.classList.add('is-opening');
   window.setTimeout(() => document.body.classList.add('intro-ready'), 210);
   window.setTimeout(() => paperboxIntro.classList.add('is-gone'), 680);
@@ -199,9 +253,32 @@ scene.add(floor);
 const cabinet = new THREE.Group();
 cabinet.position.y = -0.05;
 scene.add(cabinet);
-const wood = new THREE.MeshStandardMaterial({ color: 0x9c623e, roughness: 0.54, metalness: 0.02 });
-const edgeWood = new THREE.MeshStandardMaterial({ color: 0xb57850, roughness: 0.43, metalness: 0.02 });
-const innerWood = new THREE.MeshStandardMaterial({ color: 0x835037, roughness: 0.67 });
+function createWoodGrainTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#b87850';
+  context.fillRect(0, 0, 256, 256);
+  for (let index = 0; index < 54; index += 1) {
+    const y = index * 5 + (Math.random() - .5) * 3;
+    context.strokeStyle = `rgba(77, 39, 22, ${.045 + Math.random() * .09})`;
+    context.lineWidth = .45 + Math.random() * 1.25;
+    context.beginPath();
+    context.moveTo(-12, y);
+    for (let x = 0; x < 280; x += 18) context.lineTo(x, y + Math.sin(x * .045 + index) * (1 + Math.random() * 1.8));
+    context.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2.2, 1.4);
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return texture;
+}
+const woodGrain = createWoodGrainTexture();
+const wood = new THREE.MeshStandardMaterial({ color: 0x9c623e, map: woodGrain, roughness: 0.5, metalness: 0.025 });
+const edgeWood = new THREE.MeshStandardMaterial({ color: 0xb57850, map: woodGrain, roughness: 0.39, metalness: 0.035 });
+const innerWood = new THREE.MeshStandardMaterial({ color: 0x835037, map: woodGrain, roughness: 0.62 });
 const brass = new THREE.MeshStandardMaterial({ color: 0xd6a851, roughness: 0.32, metalness: 0.72 });
 const glass = new THREE.MeshPhysicalMaterial({ color: 0xcfe6ed, transparent: true, opacity: 0.24, roughness: 0.08, transmission: 0.28, side: THREE.DoubleSide, depthWrite: false });
 
@@ -227,9 +304,22 @@ const shelfYs = [2.05, 1.02, -0.01, -1.04, -2.07];
 const dividerXs = [-1.33, 0, 1.33];
 for (const y of shelfYs) box(width - board * 2, 0.13, depth - board * 1.25, edgeWood, 0, y, 0.04);
 for (const x of dividerXs) box(0.14, height - board * 2, depth - board * 1.15, edgeWood, x, 0, 0.03);
+// Small brass furniture tacks and an interior glow make the cabinet read as a real object.
+for (const x of [-width / 2 + .19, width / 2 - .19]) {
+  for (const y of [-height / 2 + .19, height / 2 - .19]) {
+    const tack = new THREE.Mesh(new THREE.SphereGeometry(.047, 14, 10), brass);
+    tack.position.set(x, y, depth / 2 + .018);
+    tack.castShadow = true;
+    cabinet.add(tack);
+  }
+}
+const cabinetGlow = new THREE.PointLight(0xffbd72, .52, 7.4, 2);
+cabinetGlow.position.set(0, .55, 1.0);
+cabinet.add(cabinetGlow);
 
 const rollCore = new THREE.MeshStandardMaterial({ color: 0x292724, roughness: 0.58, metalness: 0.06 });
 const capMaterial = new THREE.MeshStandardMaterial({ color: 0x20201e, roughness: 0.42, metalness: 0.18 });
+const rollRimMaterial = new THREE.MeshStandardMaterial({ color: 0x4b4740, roughness: 0.28, metalness: 0.58 });
 const labelStyles = [
   { base: '#f2c128', accent: '#1d1b18', ink: '#1d1b18', brand: 'KODAK', name: 'GOLD', iso: '100' },
   { base: '#f2c128', accent: '#1d1b18', ink: '#1d1b18', brand: 'KODAK', name: 'GOLD', iso: '200' },
@@ -295,12 +385,18 @@ function createFilmRoll(style) {
   const bottomCap = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.075, 40), capMaterial);
   const topHub = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.1, 24), capMaterial);
   const bottomHub = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.1, 24), capMaterial);
+  const upperRim = new THREE.Mesh(new THREE.TorusGeometry(.295, .018, 8, 40), rollRimMaterial);
+  const lowerRim = upperRim.clone();
+  const topInset = new THREE.Mesh(new THREE.CylinderGeometry(.062, .062, .012, 24), rollRimMaterial);
 
   topCap.position.y = 0.347;
   bottomCap.position.y = -0.347;
   topHub.position.y = 0.415;
   bottomHub.position.y = -0.415;
-  [body, labelBand, topCap, bottomCap, topHub, bottomHub].forEach((part) => {
+  upperRim.rotation.x = Math.PI / 2; upperRim.position.y = .246;
+  lowerRim.rotation.x = Math.PI / 2; lowerRim.position.y = -.246;
+  topInset.position.y = .472;
+  [body, labelBand, topCap, bottomCap, topHub, bottomHub, upperRim, lowerRim, topInset].forEach((part) => {
     part.castShadow = true;
     part.receiveShadow = true;
     roll.add(part);
@@ -499,6 +595,7 @@ function placeFilmInCell(cellId) {
   cell.filmName = selectedFilm.id;
   persistCabinetData();
   renderPlacedRolls();
+  playSceneSfx('filmPlace');
   clearCarriedFilm();
 }
 createCabinetCells();
@@ -587,12 +684,16 @@ box(1.3, 1.16, .94, giftGreen, 0, 0, 0, giftBoxModel);
 box(1.48, .24, 1.08, giftGreen, 0, .7, 0, giftBoxModel);
 box(.18, 1.48, 1.1, giftRed, 0, .09, .02, giftBoxModel);
 box(1.58, .16, .15, giftRed, 0, .86, .03, giftBoxModel);
+const giftBase = new THREE.Mesh(new THREE.BoxGeometry(1.38, .075, 1.0), new THREE.MeshStandardMaterial({ color: 0x24533e, roughness: .34, metalness: .12 }));
+giftBase.position.y = -.615;
+const giftLidRim = new THREE.Mesh(new THREE.BoxGeometry(1.54, .055, 1.14), new THREE.MeshStandardMaterial({ color: 0x8ab68b, roughness: .38, metalness: .08 }));
+giftLidRim.position.y = .79;
 const bowA = new THREE.Mesh(new THREE.TorusGeometry(.3,.06,10,24,Math.PI * 2), giftRed); bowA.scale.set(1.25,.62,1); bowA.position.set(-.25,1.0,.51);
 const bowB = bowA.clone(); bowB.position.x = .25;
 const bowCenter = new THREE.Mesh(new THREE.SphereGeometry(.105,18,14), giftRed); bowCenter.position.set(0,1.0,.54);
 const waxSeal = new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.06,24), new THREE.MeshStandardMaterial({color:0x85382d,roughness:.5})); waxSeal.rotation.x=Math.PI/2; waxSeal.position.set(0,.18,.5); waxSeal.visible=false;
 const stripeGroup = new THREE.Group(); [-.42,0,.42].forEach((x)=>{const stripe=new THREE.Mesh(new THREE.BoxGeometry(.14,1.2,.035),new THREE.MeshStandardMaterial({color:0xf0d287,roughness:.52}));stripe.position.set(x,0,.5);stripeGroup.add(stripe);}); stripeGroup.visible=false;
-giftBoxModel.add(bowA,bowB,bowCenter,waxSeal,stripeGroup); giftBoxModel.position.set(-5.1,-2.12,.12); giftBoxModel.userData.giftBox = true; giftBoxModel.userData.homePosition = giftBoxModel.position.clone(); giftBoxModel.visible = false; scene.add(giftBoxModel);
+giftBoxModel.add(giftBase,giftLidRim,bowA,bowB,bowCenter,waxSeal,stripeGroup); giftBoxModel.position.set(-5.1,-2.12,.12); giftBoxModel.userData.giftBox = true; giftBoxModel.userData.homePosition = giftBoxModel.position.clone(); giftBoxModel.visible = false; scene.add(giftBoxModel);
 const mailboxModel = new THREE.Group();
 const mailOrange = new THREE.MeshStandardMaterial({ color:0x5d9aab,roughness:.42,metalness:.12 });
 const mailCream = new THREE.MeshStandardMaterial({ color:0xf2dfb6,roughness:.58 });
@@ -604,7 +705,13 @@ const slot = new THREE.Mesh(new THREE.BoxGeometry(.68,.09,.035), new THREE.MeshS
 const letter = new THREE.Mesh(new THREE.PlaneGeometry(.48,.3), mailCream); letter.position.set(0,.26,.625); mailboxModel.add(letter);
 const flag = new THREE.Mesh(new THREE.BoxGeometry(.07,.88,.1),giftRed); flag.position.set(.68,.88,.18); mailboxModel.add(flag);
 const flagTop = new THREE.Mesh(new THREE.BoxGeometry(.34,.18,.1),giftRed); flagTop.position.set(.8,1.27,.18); mailboxModel.add(flagTop);
-mailboxModel.position.set(-7.05,-1.83,.08); mailboxModel.userData.mailbox = true; mailboxModel.visible = false; scene.add(mailboxModel);
+const mailRim = new THREE.Mesh(new THREE.TorusGeometry(.74, .026, 8, 36, Math.PI), mailCream);
+mailRim.rotation.z = Math.PI / 2; mailRim.position.set(0, .76, .578); mailboxModel.add(mailRim);
+const mailHandle = new THREE.Mesh(new THREE.TorusGeometry(.105, .022, 8, 18, Math.PI), mailCream);
+mailHandle.position.set(0, .1, .63); mailboxModel.add(mailHandle);
+const postBase = new THREE.Mesh(new THREE.CylinderGeometry(.45, .52, .12, 32), new THREE.MeshStandardMaterial({ color: 0x4b747c, roughness: .38, metalness: .16 }));
+postBase.position.y = -1.61; mailboxModel.add(postBase);
+mailboxModel.position.set(-7.05,-1.83,.08); mailboxModel.userData.mailbox = true; mailboxModel.userData.homePosition = mailboxModel.position.clone(); mailboxModel.visible = false; scene.add(mailboxModel);
 let giftMode = false;
 let boxedGiftFilm = null;
 let draggedGiftBox = false;
@@ -619,11 +726,31 @@ function setBoxedGiftFilm(film) {
   giftBoxModel.userData.packedFilm = film;
 }
 function setGiftMode(active) {
+  const propsWereVisible = giftBoxModel.visible || mailboxModel.visible;
   giftMode = active;
   if (!active) setBoxedGiftFilm(null);
   clearCarriedFilm(); selectedFilm = null;
-  giftBoxModel.position.copy(giftBoxModel.userData.homePosition);
-  giftBoxModel.visible = active; mailboxModel.visible = active;
+  gsap.killTweensOf([giftBoxModel.position, giftBoxModel.scale, mailboxModel.position, mailboxModel.scale]);
+  if (active) {
+    giftBoxModel.visible = true; mailboxModel.visible = true;
+    giftBoxModel.position.copy(giftBoxModel.userData.homePosition).add(new THREE.Vector3(0, 1.35, -.12));
+    mailboxModel.position.copy(mailboxModel.userData.homePosition || mailboxModel.position).add(new THREE.Vector3(0, 1.2, -.12));
+    giftBoxModel.scale.setScalar(.08); mailboxModel.scale.setScalar(.08);
+    gsap.to(giftBoxModel.position, { x: giftBoxModel.userData.homePosition.x, y: giftBoxModel.userData.homePosition.y, z: giftBoxModel.userData.homePosition.z, duration: .58, ease: 'bounce.out' });
+    gsap.to(giftBoxModel.scale, { x: 1, y: 1, z: 1, duration: .46, ease: 'back.out(1.65)' });
+    gsap.to(mailboxModel.position, { x: mailboxModel.userData.homePosition.x, y: mailboxModel.userData.homePosition.y, z: mailboxModel.userData.homePosition.z, duration: .64, delay: .08, ease: 'bounce.out' });
+    gsap.to(mailboxModel.scale, { x: 1, y: 1, z: 1, duration: .48, delay: .08, ease: 'back.out(1.65)' });
+    playSceneSfx('giftIn'); window.setTimeout(() => playSceneSfx('mailIn'), 110);
+  } else if (propsWereVisible) {
+    playSceneSfx('giftOut'); window.setTimeout(() => playSceneSfx('mailOut'), 55);
+    [giftBoxModel, mailboxModel].forEach((prop, index) => {
+      gsap.to(prop.scale, { x: .05, y: .05, z: .05, duration: .2, delay: index * .04, ease: 'power2.in', onComplete: () => {
+        prop.visible = false;
+        prop.position.copy(prop.userData.homePosition);
+        prop.scale.setScalar(1);
+      }});
+    });
+  }
   document.querySelector('#gift-palette')?.classList.toggle('is-visible',active);
   sampleRoll.visible = false; trashBin.visible = false;
   instruction.textContent = active ? '先拖一卷柜中胶卷到礼物盒 · 再把礼物盒拖进邮箱' : '拖动旋转 · 滚轮缩放 · 点击柜门打开';
@@ -640,6 +767,7 @@ function toggleDeskObject(object, control) {
   const willShow = !object.visible;
   gsap.killTweensOf([object.position, object.scale]);
   if (willShow) {
+    playSceneSfx(object === sampleRoll ? 'filmIn' : 'binIn');
     const { x, y, z } = object.userData.homePosition;
     object.visible = true;
     object.position.set(x, y + 1.8, z - .18);
@@ -647,6 +775,7 @@ function toggleDeskObject(object, control) {
     gsap.to(object.position, { x, y, z, duration: .62, ease: 'bounce.out' });
     gsap.to(object.scale, { x: object.userData.homeScale, y: object.userData.homeScale, z: object.userData.homeScale, duration: .48, ease: 'back.out(1.55)' });
   } else {
+    playSceneSfx(object === sampleRoll ? 'filmOut' : 'binOut');
     gsap.to(object.scale, { x: .05, y: .05, z: .05, duration: .2, ease: 'power2.in', onComplete: () => {
       object.visible = false;
       object.position.copy(object.userData.homePosition);
@@ -884,6 +1013,7 @@ function removeFilmFromCell(cellId) {
   cell.filmName = null;
   persistCabinetData();
   renderPlacedRolls();
+  playSceneSfx('trashDrop');
   instruction.textContent = '胶卷已放入垃圾桶';
   window.setTimeout(() => { if (isOpen && !selectedFilm) instruction.textContent = '点击柜子旁边的胶卷样品开始放置'; }, 1100);
 }

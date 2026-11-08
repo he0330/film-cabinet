@@ -1,5 +1,5 @@
 (() => {
-  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/three/build/three.core.js
+  // node_modules/three/build/three.core.js
   var REVISION = "187";
   var MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
   var TOUCH = { ROTATE: 0, PAN: 1, DOLLY_PAN: 2, DOLLY_ROTATE: 3 };
@@ -16085,6 +16085,63 @@
       return data;
     }
   };
+  var PointLightShadow = class extends LightShadow {
+    /**
+     * Constructs a new point light shadow.
+     */
+    constructor() {
+      super(new PerspectiveCamera(90, 1, 0.5, 500));
+      this.isPointLightShadow = true;
+    }
+  };
+  var PointLight = class extends Light {
+    /**
+     * Constructs a new point light.
+     *
+     * @param {(number|Color|string)} [color=0xffffff] - The light's color.
+     * @param {number} [intensity=1] - The light's strength/intensity measured in candela (cd).
+     * @param {number} [distance=0] - Maximum range of the light. `0` means no limit.
+     * @param {number} [decay=2] - The amount the light dims along the distance of the light.
+     */
+    constructor(color, intensity, distance = 0, decay = 2) {
+      super(color, intensity);
+      this.isPointLight = true;
+      this.type = "PointLight";
+      this.distance = distance;
+      this.decay = decay;
+      this.shadow = new PointLightShadow();
+    }
+    /**
+     * The light's power. Power is the luminous power of the light measured in lumens (lm).
+     * Changing the power will also change the light's intensity.
+     *
+     * @type {number}
+     */
+    get power() {
+      return this.intensity * 4 * Math.PI;
+    }
+    set power(power) {
+      this.intensity = power / (4 * Math.PI);
+    }
+    dispose() {
+      super.dispose();
+      this.shadow.dispose();
+    }
+    copy(source, recursive) {
+      super.copy(source, recursive);
+      this.distance = source.distance;
+      this.decay = source.decay;
+      this.shadow = source.shadow.clone();
+      return this;
+    }
+    toJSON(meta) {
+      const data = super.toJSON(meta);
+      data.object.distance = this.distance;
+      data.object.decay = this.decay;
+      data.object.shadow = this.shadow.toJSON();
+      return data;
+    }
+  };
   var OrthographicCamera = class extends Camera {
     /**
      * Constructs a new orthographic camera.
@@ -17287,7 +17344,7 @@
     }
   }
 
-  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/three/build/three.module.js
+  // node_modules/three/build/three.module.js
   function WebGLAnimation() {
     let context3 = null;
     let isAnimating = false;
@@ -28673,7 +28730,7 @@ void main() {
     }
   };
 
-  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/three/examples/jsm/controls/OrbitControls.js
+  // node_modules/three/examples/jsm/controls/OrbitControls.js
   var _changeEvent = { type: "change" };
   var _startEvent = { type: "start" };
   var _endEvent = { type: "end" };
@@ -29595,7 +29652,7 @@ void main() {
     }
   }
 
-  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/gsap/gsap-core.js
+  // node_modules/gsap/gsap-core.js
   function _assertThisInitialized(self2) {
     if (self2 === void 0) {
       throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
@@ -32769,7 +32826,7 @@ void main() {
   var Expo = _easeMap.Expo;
   var Circ = _easeMap.Circ;
 
-  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/gsap/CSSPlugin.js
+  // node_modules/gsap/CSSPlugin.js
   var _win2;
   var _doc2;
   var _docElement;
@@ -33886,11 +33943,11 @@ void main() {
   });
   gsap.registerPlugin(CSSPlugin);
 
-  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/node_modules/gsap/index.js
+  // node_modules/gsap/index.js
   var gsapWithCSS = gsap.registerPlugin(CSSPlugin) || gsap;
   var TweenMaxWithCSS = gsapWithCSS.core.Tween;
 
-  // 2026-11-05/c-users-33531-documents-codex-2026/scene-3d/main.js
+  // main.js
   var host = document.querySelector("#canvas-wrap");
   var instruction = document.querySelector(".instruction");
   var filmPicker = document.querySelector("#film-picker");
@@ -33913,8 +33970,64 @@ void main() {
   var trashSticker = document.querySelector("#trash-sticker");
   var paperboxIntro = document.querySelector("#paperbox-intro");
   var paperboxOpen = document.querySelector("#paperbox-open");
+  var sceneAudioContext;
+  function getSceneAudio() {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return null;
+    if (!sceneAudioContext) sceneAudioContext = new AudioCtor();
+    if (sceneAudioContext.state === "suspended") sceneAudioContext.resume();
+    return sceneAudioContext;
+  }
+  function playSceneSfx(kind) {
+    const context3 = getSceneAudio();
+    if (!context3) return;
+    const now = context3.currentTime + 0.01;
+    const recipes = {
+      paperOpen: [[280, 520, 0.07, "triangle"], [720, 420, 0.12, "sine"]],
+      filmIn: [[360, 660, 0.08, "sine"], [660, 900, 0.12, "triangle"]],
+      filmOut: [[680, 330, 0.13, "triangle"]],
+      binIn: [[250, 520, 0.07, "triangle"], [520, 760, 0.1, "sine"]],
+      binOut: [[580, 260, 0.12, "triangle"]],
+      filmPlace: [[720, 410, 0.08, "triangle"]],
+      trashDrop: [[220, 120, 0.14, "sine"]],
+      giftIn: [[390, 620, 0.11, "sine"], [620, 880, 0.14, "triangle"]],
+      giftOut: [[720, 390, 0.13, "triangle"]],
+      mailIn: [[470, 760, 0.09, "sine"], [760, 980, 0.11, "sine"]],
+      mailOut: [[760, 360, 0.12, "triangle"]]
+    };
+    (recipes[kind] || []).forEach(([from, to, duration, type], index) => {
+      const oscillator = context3.createOscillator();
+      const gain = context3.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(from, now + index * 0.018);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(35, to), now + index * 0.018 + duration);
+      gain.gain.setValueAtTime(1e-4, now + index * 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.075, now + index * 0.018 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(1e-4, now + index * 0.018 + duration);
+      oscillator.connect(gain).connect(context3.destination);
+      oscillator.start(now + index * 0.018);
+      oscillator.stop(now + index * 0.018 + duration + 0.02);
+    });
+    if (kind === "paperOpen") {
+      const buffer = context3.createBuffer(1, Math.floor(context3.sampleRate * 0.13), context3.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const noise = context3.createBufferSource();
+      const filter = context3.createBiquadFilter();
+      const gain = context3.createGain();
+      filter.type = "bandpass";
+      filter.frequency.value = 1750;
+      filter.Q.value = 0.8;
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(1e-4, now + 0.13);
+      noise.buffer = buffer;
+      noise.connect(filter).connect(gain).connect(context3.destination);
+      noise.start(now);
+    }
+  }
   function openPaperboxIntro() {
     if (!paperboxIntro || paperboxIntro.classList.contains("is-opening")) return;
+    playSceneSfx("paperOpen");
     paperboxIntro.classList.add("is-opening");
     window.setTimeout(() => document.body.classList.add("intro-ready"), 210);
     window.setTimeout(() => paperboxIntro.classList.add("is-gone"), 680);
@@ -34082,9 +34195,32 @@ void main() {
   var cabinet = new Group();
   cabinet.position.y = -0.05;
   scene.add(cabinet);
-  var wood = new MeshStandardMaterial({ color: 10248766, roughness: 0.54, metalness: 0.02 });
-  var edgeWood = new MeshStandardMaterial({ color: 11892816, roughness: 0.43, metalness: 0.02 });
-  var innerWood = new MeshStandardMaterial({ color: 8605751, roughness: 0.67 });
+  function createWoodGrainTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 256;
+    const context3 = canvas.getContext("2d");
+    context3.fillStyle = "#b87850";
+    context3.fillRect(0, 0, 256, 256);
+    for (let index = 0; index < 54; index += 1) {
+      const y = index * 5 + (Math.random() - 0.5) * 3;
+      context3.strokeStyle = `rgba(77, 39, 22, ${0.045 + Math.random() * 0.09})`;
+      context3.lineWidth = 0.45 + Math.random() * 1.25;
+      context3.beginPath();
+      context3.moveTo(-12, y);
+      for (let x = 0; x < 280; x += 18) context3.lineTo(x, y + Math.sin(x * 0.045 + index) * (1 + Math.random() * 1.8));
+      context3.stroke();
+    }
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.wrapS = texture.wrapT = RepeatWrapping;
+    texture.repeat.set(2.2, 1.4);
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return texture;
+  }
+  var woodGrain = createWoodGrainTexture();
+  var wood = new MeshStandardMaterial({ color: 10248766, map: woodGrain, roughness: 0.5, metalness: 0.025 });
+  var edgeWood = new MeshStandardMaterial({ color: 11892816, map: woodGrain, roughness: 0.39, metalness: 0.035 });
+  var innerWood = new MeshStandardMaterial({ color: 8605751, map: woodGrain, roughness: 0.62 });
   var brass = new MeshStandardMaterial({ color: 14067793, roughness: 0.32, metalness: 0.72 });
   var glass = new MeshPhysicalMaterial({ color: 13625069, transparent: true, opacity: 0.24, roughness: 0.08, transmission: 0.28, side: DoubleSide, depthWrite: false });
   function box(width2, height2, depth2, material, x = 0, y = 0, z = 0, parent = cabinet) {
@@ -34108,8 +34244,20 @@ void main() {
   var dividerXs = [-1.33, 0, 1.33];
   for (const y of shelfYs) box(width - board * 2, 0.13, depth - board * 1.25, edgeWood, 0, y, 0.04);
   for (const x of dividerXs) box(0.14, height - board * 2, depth - board * 1.15, edgeWood, x, 0, 0.03);
+  for (const x of [-width / 2 + 0.19, width / 2 - 0.19]) {
+    for (const y of [-height / 2 + 0.19, height / 2 - 0.19]) {
+      const tack = new Mesh(new SphereGeometry(0.047, 14, 10), brass);
+      tack.position.set(x, y, depth / 2 + 0.018);
+      tack.castShadow = true;
+      cabinet.add(tack);
+    }
+  }
+  var cabinetGlow = new PointLight(16760178, 0.52, 7.4, 2);
+  cabinetGlow.position.set(0, 0.55, 1);
+  cabinet.add(cabinetGlow);
   var rollCore = new MeshStandardMaterial({ color: 2696996, roughness: 0.58, metalness: 0.06 });
   var capMaterial = new MeshStandardMaterial({ color: 2105374, roughness: 0.42, metalness: 0.18 });
+  var rollRimMaterial = new MeshStandardMaterial({ color: 4933440, roughness: 0.28, metalness: 0.58 });
   var labelStyles = [
     { base: "#f2c128", accent: "#1d1b18", ink: "#1d1b18", brand: "KODAK", name: "GOLD", iso: "100" },
     { base: "#f2c128", accent: "#1d1b18", ink: "#1d1b18", brand: "KODAK", name: "GOLD", iso: "200" },
@@ -34173,11 +34321,19 @@ void main() {
     const bottomCap = new Mesh(new CylinderGeometry(0.32, 0.32, 0.075, 40), capMaterial);
     const topHub = new Mesh(new CylinderGeometry(0.09, 0.09, 0.1, 24), capMaterial);
     const bottomHub = new Mesh(new CylinderGeometry(0.09, 0.09, 0.1, 24), capMaterial);
+    const upperRim2 = new Mesh(new TorusGeometry(0.295, 0.018, 8, 40), rollRimMaterial);
+    const lowerRim = upperRim2.clone();
+    const topInset = new Mesh(new CylinderGeometry(0.062, 0.062, 0.012, 24), rollRimMaterial);
     topCap.position.y = 0.347;
     bottomCap.position.y = -0.347;
     topHub.position.y = 0.415;
     bottomHub.position.y = -0.415;
-    [body, labelBand, topCap, bottomCap, topHub, bottomHub].forEach((part) => {
+    upperRim2.rotation.x = Math.PI / 2;
+    upperRim2.position.y = 0.246;
+    lowerRim.rotation.x = Math.PI / 2;
+    lowerRim.position.y = -0.246;
+    topInset.position.y = 0.472;
+    [body, labelBand, topCap, bottomCap, topHub, bottomHub, upperRim2, lowerRim, topInset].forEach((part) => {
       part.castShadow = true;
       part.receiveShadow = true;
       roll.add(part);
@@ -34365,6 +34521,7 @@ void main() {
     cell.filmName = selectedFilm.id;
     persistCabinetData();
     renderPlacedRolls();
+    playSceneSfx("filmPlace");
     clearCarriedFilm();
   }
   createCabinetCells();
@@ -34462,6 +34619,10 @@ void main() {
   box(1.48, 0.24, 1.08, giftGreen, 0, 0.7, 0, giftBoxModel);
   box(0.18, 1.48, 1.1, giftRed, 0, 0.09, 0.02, giftBoxModel);
   box(1.58, 0.16, 0.15, giftRed, 0, 0.86, 0.03, giftBoxModel);
+  var giftBase = new Mesh(new BoxGeometry(1.38, 0.075, 1), new MeshStandardMaterial({ color: 2380606, roughness: 0.34, metalness: 0.12 }));
+  giftBase.position.y = -0.615;
+  var giftLidRim = new Mesh(new BoxGeometry(1.54, 0.055, 1.14), new MeshStandardMaterial({ color: 9090699, roughness: 0.38, metalness: 0.08 }));
+  giftLidRim.position.y = 0.79;
   var bowA = new Mesh(new TorusGeometry(0.3, 0.06, 10, 24, Math.PI * 2), giftRed);
   bowA.scale.set(1.25, 0.62, 1);
   bowA.position.set(-0.25, 1, 0.51);
@@ -34480,7 +34641,7 @@ void main() {
     stripeGroup.add(stripe);
   });
   stripeGroup.visible = false;
-  giftBoxModel.add(bowA, bowB, bowCenter, waxSeal, stripeGroup);
+  giftBoxModel.add(giftBase, giftLidRim, bowA, bowB, bowCenter, waxSeal, stripeGroup);
   giftBoxModel.position.set(-5.1, -2.12, 0.12);
   giftBoxModel.userData.giftBox = true;
   giftBoxModel.userData.homePosition = giftBoxModel.position.clone();
@@ -34510,8 +34671,19 @@ void main() {
   var flagTop = new Mesh(new BoxGeometry(0.34, 0.18, 0.1), giftRed);
   flagTop.position.set(0.8, 1.27, 0.18);
   mailboxModel.add(flagTop);
+  var mailRim = new Mesh(new TorusGeometry(0.74, 0.026, 8, 36, Math.PI), mailCream);
+  mailRim.rotation.z = Math.PI / 2;
+  mailRim.position.set(0, 0.76, 0.578);
+  mailboxModel.add(mailRim);
+  var mailHandle = new Mesh(new TorusGeometry(0.105, 0.022, 8, 18, Math.PI), mailCream);
+  mailHandle.position.set(0, 0.1, 0.63);
+  mailboxModel.add(mailHandle);
+  var postBase = new Mesh(new CylinderGeometry(0.45, 0.52, 0.12, 32), new MeshStandardMaterial({ color: 4945020, roughness: 0.38, metalness: 0.16 }));
+  postBase.position.y = -1.61;
+  mailboxModel.add(postBase);
   mailboxModel.position.set(-7.05, -1.83, 0.08);
   mailboxModel.userData.mailbox = true;
+  mailboxModel.userData.homePosition = mailboxModel.position.clone();
   mailboxModel.visible = false;
   scene.add(mailboxModel);
   var giftMode = false;
@@ -34525,13 +34697,36 @@ void main() {
     giftBoxModel.userData.packedFilm = film;
   }
   function setGiftMode(active) {
+    const propsWereVisible = giftBoxModel.visible || mailboxModel.visible;
     giftMode = active;
     if (!active) setBoxedGiftFilm(null);
     clearCarriedFilm();
     selectedFilm = null;
-    giftBoxModel.position.copy(giftBoxModel.userData.homePosition);
-    giftBoxModel.visible = active;
-    mailboxModel.visible = active;
+    gsapWithCSS.killTweensOf([giftBoxModel.position, giftBoxModel.scale, mailboxModel.position, mailboxModel.scale]);
+    if (active) {
+      giftBoxModel.visible = true;
+      mailboxModel.visible = true;
+      giftBoxModel.position.copy(giftBoxModel.userData.homePosition).add(new Vector3(0, 1.35, -0.12));
+      mailboxModel.position.copy(mailboxModel.userData.homePosition || mailboxModel.position).add(new Vector3(0, 1.2, -0.12));
+      giftBoxModel.scale.setScalar(0.08);
+      mailboxModel.scale.setScalar(0.08);
+      gsapWithCSS.to(giftBoxModel.position, { x: giftBoxModel.userData.homePosition.x, y: giftBoxModel.userData.homePosition.y, z: giftBoxModel.userData.homePosition.z, duration: 0.58, ease: "bounce.out" });
+      gsapWithCSS.to(giftBoxModel.scale, { x: 1, y: 1, z: 1, duration: 0.46, ease: "back.out(1.65)" });
+      gsapWithCSS.to(mailboxModel.position, { x: mailboxModel.userData.homePosition.x, y: mailboxModel.userData.homePosition.y, z: mailboxModel.userData.homePosition.z, duration: 0.64, delay: 0.08, ease: "bounce.out" });
+      gsapWithCSS.to(mailboxModel.scale, { x: 1, y: 1, z: 1, duration: 0.48, delay: 0.08, ease: "back.out(1.65)" });
+      playSceneSfx("giftIn");
+      window.setTimeout(() => playSceneSfx("mailIn"), 110);
+    } else if (propsWereVisible) {
+      playSceneSfx("giftOut");
+      window.setTimeout(() => playSceneSfx("mailOut"), 55);
+      [giftBoxModel, mailboxModel].forEach((prop, index) => {
+        gsapWithCSS.to(prop.scale, { x: 0.05, y: 0.05, z: 0.05, duration: 0.2, delay: index * 0.04, ease: "power2.in", onComplete: () => {
+          prop.visible = false;
+          prop.position.copy(prop.userData.homePosition);
+          prop.scale.setScalar(1);
+        } });
+      });
+    }
     document.querySelector("#gift-palette")?.classList.toggle("is-visible", active);
     sampleRoll.visible = false;
     trashBin.visible = false;
@@ -34588,6 +34783,7 @@ void main() {
     const willShow = !object.visible;
     gsapWithCSS.killTweensOf([object.position, object.scale]);
     if (willShow) {
+      playSceneSfx(object === sampleRoll ? "filmIn" : "binIn");
       const { x, y, z } = object.userData.homePosition;
       object.visible = true;
       object.position.set(x, y + 1.8, z - 0.18);
@@ -34595,6 +34791,7 @@ void main() {
       gsapWithCSS.to(object.position, { x, y, z, duration: 0.62, ease: "bounce.out" });
       gsapWithCSS.to(object.scale, { x: object.userData.homeScale, y: object.userData.homeScale, z: object.userData.homeScale, duration: 0.48, ease: "back.out(1.55)" });
     } else {
+      playSceneSfx(object === sampleRoll ? "filmOut" : "binOut");
       gsapWithCSS.to(object.scale, { x: 0.05, y: 0.05, z: 0.05, duration: 0.2, ease: "power2.in", onComplete: () => {
         object.visible = false;
         object.position.copy(object.userData.homePosition);
@@ -34815,6 +35012,7 @@ void main() {
     cell.filmName = null;
     persistCabinetData();
     renderPlacedRolls();
+    playSceneSfx("trashDrop");
     instruction.textContent = "\u80F6\u5377\u5DF2\u653E\u5165\u5783\u573E\u6876";
     window.setTimeout(() => {
       if (isOpen && !selectedFilm) instruction.textContent = "\u70B9\u51FB\u67DC\u5B50\u65C1\u8FB9\u7684\u80F6\u5377\u6837\u54C1\u5F00\u59CB\u653E\u7F6E";
