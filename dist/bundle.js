@@ -34154,6 +34154,12 @@ void main() {
   var controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.07;
+  controls.enableZoom = true;
+  controls.zoomSpeed = 0.82;
+  controls.dollySpeed = 0.82;
+  controls.touches.ONE = TOUCH.ROTATE;
+  controls.touches.TWO = TOUCH.DOLLY_PAN;
+  renderer.domElement.style.touchAction = "none";
   controls.target.copy(homeTarget);
   controls.minDistance = 7.3;
   controls.maxDistance = 16;
@@ -34162,18 +34168,26 @@ void main() {
   controls.maxAzimuthAngle = 1.45;
   controls.minAzimuthAngle = -1.45;
   controls.update();
-  var wasPhonePortrait = isPhonePortrait();
-  function syncResponsiveCamera() {
+  var wasPhonePortrait = !isPhonePortrait();
+  function syncResponsiveCamera(initial = false) {
     const phonePortrait = isPhonePortrait();
-    if (phonePortrait === wasPhonePortrait) return;
+    if (!initial && phonePortrait === wasPhonePortrait) return;
     wasPhonePortrait = phonePortrait;
     homeCamera.z = phonePortrait ? 19.5 : 13.6;
-    controls.minDistance = phonePortrait ? 10.5 : 7.3;
-    controls.maxDistance = phonePortrait ? 23 : 16;
+    controls.minDistance = phonePortrait ? 8.8 : 7.3;
+    controls.maxDistance = phonePortrait ? 26 : 16;
+    if (initial) {
+      camera.position.copy(homeCamera);
+      controls.target.copy(homeTarget);
+      controls.update();
+      return;
+    }
     gsapWithCSS.to(camera.position, { x: homeCamera.x, y: homeCamera.y, z: homeCamera.z, duration: 0.35, ease: "power2.out" });
     gsapWithCSS.to(controls.target, { x: homeTarget.x, y: homeTarget.y, z: homeTarget.z, duration: 0.35, ease: "power2.out", onUpdate: () => controls.update() });
   }
+  syncResponsiveCamera(true);
   window.addEventListener("orientationchange", () => window.setTimeout(syncResponsiveCamera, 180));
+  window.addEventListener("resize", () => window.setTimeout(syncResponsiveCamera, 80));
   scene.add(new HemisphereLight(16775149, 5978149, 2.1));
   var keyLight = new DirectionalLight(16769735, 3.4);
   keyLight.position.set(6, 8, 7);
